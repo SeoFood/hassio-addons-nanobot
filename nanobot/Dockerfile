@@ -31,6 +31,9 @@ RUN apt-get update \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
     && ln -sf /root/.local/bin/uv /usr/local/bin/uv
 
+# Remove PEP 668 marker so uv can install system-wide
+RUN rm -f /usr/lib/python3.*/EXTERNALLY-MANAGED
+
 # Install nanobot from PyPI
 RUN uv pip install --system "nanobot-ai==${NANOBOT_VERSION}"
 
