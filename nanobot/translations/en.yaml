@@ -1,0 +1,38 @@
+---
+configuration:
+  provider:
+    name: Provider
+    description: LLM provider name (for example openrouter, anthropic, openai, deepseek, groq, gemini).
+  api_key:
+    name: API key
+    description: API key for the selected provider.
+  model:
+    name: Model
+    description: Optional model override (for example anthropic/claude-sonnet-4-20250514).
+  telegram_enabled:
+    name: Telegram enabled
+    description: Enable the Telegram channel.
+  telegram_token:
+    name: Telegram token
+    description: Bot token from @BotFather.
+  telegram_allow_from:
+    name: Telegram allowed users
+    description: List of allowed Telegram user IDs or usernames. Leave empty to allow all.
+  discord_enabled:
+    name: Discord enabled
+    description: Enable the Discord channel.
+  discord_token:
+    name: Discord token
+    description: Bot token from the Discord Developer Portal.
+  discord_allow_from:
+    name: Discord allowed users
+    description: List of allowed Discord user IDs. Leave empty to allow all.
+  whatsapp_enabled:
+    name: WhatsApp enabled
+    description: Enable the WhatsApp channel using the built-in bridge.
+  whatsapp_allow_from:
+    name: WhatsApp allowed numbers
+    description: List of allowed phone numbers. Leave empty to allow all.
+  persistent_data_dir:
+    name: Persistent data directory
+    description: Optional folder for all persistent add-on data (config, workspace, WhatsApp auth). Relative paths resolve under /share.

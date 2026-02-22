@@ -1,0 +1,112 @@
+name: Check Nanobot Upstream
+
+on:
+  schedule:
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: check-nanobot-upstream
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check upstream release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare pinned vs latest PyPI release
+        id: compare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current="$(awk -F= '/^ARG NANOBOT_VERSION=/{print $2; exit}' nanobot/Dockerfile | tr -d '[:space:]')"
+          if [[ -z "${current}" ]]; then
+            echo "Could not read ARG NANOBOT_VERSION from nanobot/Dockerfile" >&2
+            exit 1
+          fi
+
+          latest="$(curl -fsSL https://pypi.org/pypi/nanobot-ai/json | jq -r '.info.version')"
+          if [[ -z "${latest}" || "${latest}" == "null" ]]; then
+            echo "Could not resolve latest nanobot-ai version from PyPI" >&2
+            exit 1
+          fi
+
+          update_available="false"
+          if [[ "${current}" != "${latest}" ]]; then
+            update_available="true"
+          fi
+
+          latest_sanitized="$(echo "${latest}" | tr -c '[:alnum:]._-' '-')"
+
+          echo "current=${current}" >> "${GITHUB_OUTPUT}"
+          echo "latest=${latest}" >> "${GITHUB_OUTPUT}"
+          echo "latest_sanitized=${latest_sanitized}" >> "${GITHUB_OUTPUT}"
+          echo "update_available=${update_available}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "## Nanobot Upstream Check"
+            echo ""
+            echo "- Pinned in add-on: \`${current}\`"
+            echo "- Latest upstream: \`${latest}\`"
+            echo "- Update available: \`${update_available}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Update pinned versions
+        id: bump
+        if: steps.compare.outputs.update_available == 'true'
+        shell: bash
+        env:
+          LATEST: ${{ steps.compare.outputs.latest }}
+        run: |
+          set -euo pipefail
+
+          current_addon_version="$(awk -F': ' '/^version:/{gsub(/"/,"",$2); print $2; exit}' nanobot/config.yaml)"
+          if [[ -z "${current_addon_version}" ]]; then
+            echo "Could not read add-on version from nanobot/config.yaml" >&2
+            exit 1
+          fi
+
+          if [[ "${current_addon_version}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+            base="${BASH_REMATCH[1]}"
+            n="${BASH_REMATCH[2]}"
+            next_addon_version="${base}-$((n + 1))"
+          elif [[ "${current_addon_version}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            next_addon_version="${current_addon_version}-1"
+          else
+            echo "Unsupported add-on version format: ${current_addon_version}" >&2
+            exit 1
+          fi
+
+          sed -E -i "s/^ARG NANOBOT_VERSION=.*/ARG NANOBOT_VERSION=${LATEST}/" nanobot/Dockerfile
+          sed -E -i "s/^version: .*/version: ${next_addon_version}/" nanobot/config.yaml
+          sed -E -i "s/^  NANOBOT_VERSION: .*/  NANOBOT_VERSION: ${LATEST}/" nanobot/build.yaml
+
+          echo "next_addon_version=${next_addon_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create pull request when update is available
+        if: steps.compare.outputs.update_available == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: bump nanobot-ai to ${{ steps.compare.outputs.latest }}"
+          branch: "chore/bump-nanobot-${{ steps.compare.outputs.latest_sanitized }}"
+          delete-branch: true
+          title: "chore: bump nanobot-ai to ${{ steps.compare.outputs.latest }}"
+          body: |
+            Automated update of the pinned nanobot-ai version.
+
+            - Previous: `${{ steps.compare.outputs.current }}`
+            - New: `${{ steps.compare.outputs.latest }}`
+            - New add-on version: `${{ steps.bump.outputs.next_addon_version }}`
+
+            Changes:
+            - `nanobot/Dockerfile`: `ARG NANOBOT_VERSION`
+            - `nanobot/config.yaml`: `version`
+            - `nanobot/build.yaml`: `NANOBOT_VERSION`
