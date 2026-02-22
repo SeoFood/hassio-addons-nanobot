@@ -6,10 +6,9 @@ This add-on packages [Nanobot](https://github.com/HKUDS/nanobot) and runs its ga
 
 - Multi-arch build target: `amd64`, `aarch64`
 - Gateway mode with HTTP API on port 18790
-- Telegram, Discord, and WhatsApp channels configurable via add-on UI
-- Built-in WhatsApp bridge (auto-started when enabled)
-- Advanced channels (Feishu, DingTalk, Slack, QQ, Email, Mochat) via manual config.json editing
-- Configurable persistent data directory via `persistent_data_dir` (use `/share/...` for easy backup/restore)
-- Config merge: add-on UI keys are applied on every start, manual keys are preserved
+- Minimal add-on UI - only `persistent_data_dir` to configure
+- Full Nanobot configuration via `config.json` (provider, channels, tools, MCP servers, etc.)
+- Built-in WhatsApp bridge (auto-started when enabled in config.json)
+- Configurable persistent data directory (default `/share/nanobot`)
 
 See `DOCS.md` for configuration details.

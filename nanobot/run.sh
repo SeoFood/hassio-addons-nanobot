@@ -46,34 +46,14 @@ dir_has_entries() {
 # Read HA options
 # ---------------------------------------------------------------------------
 
-API_KEY="$(read_opt '.api_key' '')"
-PROVIDER="$(read_opt '.provider' 'openrouter')"
-MODEL="$(read_opt '.model' '')"
-PERSISTENT_DATA_DIR="$(read_opt '.persistent_data_dir' '')"
-
-TELEGRAM_ENABLED="$(read_opt '.telegram_enabled' 'false')"
-TELEGRAM_TOKEN="$(read_opt '.telegram_token' '')"
-
-DISCORD_ENABLED="$(read_opt '.discord_enabled' 'false')"
-DISCORD_TOKEN="$(read_opt '.discord_token' '')"
-
-WHATSAPP_ENABLED="$(read_opt '.whatsapp_enabled' 'false')"
-
-# ---------------------------------------------------------------------------
-# Validate required fields
-# ---------------------------------------------------------------------------
-
-if [[ -z "${API_KEY}" ]]; then
-    echo "ERROR: Option 'api_key' is missing or empty." >&2
-    exit 1
-fi
+PERSISTENT_DATA_DIR="$(read_opt '.persistent_data_dir' 'nanobot')"
 
 # ---------------------------------------------------------------------------
 # Resolve state directory + migration
 # ---------------------------------------------------------------------------
 
 if [[ "${PERSISTENT_DATA_DIR}" == "null" ]]; then
-    PERSISTENT_DATA_DIR=""
+    PERSISTENT_DATA_DIR="nanobot"
 fi
 if [[ -n "${PERSISTENT_DATA_DIR}" ]]; then
     STATE_DIR="$(resolve_path "${PERSISTENT_DATA_DIR}")"
@@ -93,71 +73,19 @@ mkdir -p "${STATE_DIR}/.nanobot" "${STATE_DIR}/workspace"
 export HOME="${STATE_DIR}"
 
 # ---------------------------------------------------------------------------
-# Read allow_from arrays from HA options
-# ---------------------------------------------------------------------------
-
-TELEGRAM_ALLOW_FROM="$(jq -c '.telegram_allow_from // []' "${OPTIONS_FILE}" 2>/dev/null || echo '[]')"
-DISCORD_ALLOW_FROM="$(jq -c '.discord_allow_from // []' "${OPTIONS_FILE}" 2>/dev/null || echo '[]')"
-WHATSAPP_ALLOW_FROM="$(jq -c '.whatsapp_allow_from // []' "${OPTIONS_FILE}" 2>/dev/null || echo '[]')"
-
-# ---------------------------------------------------------------------------
-# Generate config.json (merge strategy: HA keys overwrite, user keys preserved)
+# Inject gateway defaults into config.json
 # ---------------------------------------------------------------------------
 
 CONFIG_FILE="${STATE_DIR}/.nanobot/config.json"
 
-# Build HA-managed config fragment
-HA_CONFIG="$(jq -n \
-    --arg provider "${PROVIDER}" \
-    --arg api_key "${API_KEY}" \
-    --arg model "${MODEL}" \
-    --arg workspace "${STATE_DIR}/workspace" \
-    --argjson telegram_enabled "${TELEGRAM_ENABLED}" \
-    --arg telegram_token "${TELEGRAM_TOKEN}" \
-    --argjson telegram_allow_from "${TELEGRAM_ALLOW_FROM}" \
-    --argjson discord_enabled "${DISCORD_ENABLED}" \
-    --arg discord_token "${DISCORD_TOKEN}" \
-    --argjson discord_allow_from "${DISCORD_ALLOW_FROM}" \
-    --argjson whatsapp_enabled "${WHATSAPP_ENABLED}" \
-    --argjson whatsapp_allow_from "${WHATSAPP_ALLOW_FROM}" \
-    '{
-        providers: {
-            ($provider): {
-                apiKey: $api_key
-            }
-        },
-        agents: {
-            defaults: ({
-                workspace: $workspace
-            } + if $model != "" and $model != "null" then { model: $model } else {} end)
-        },
-        channels: {
-            telegram: ({
-                enabled: $telegram_enabled
-            } + if $telegram_token != "" and $telegram_token != "null" then { token: $telegram_token } else {} end
-              + if ($telegram_allow_from | length) > 0 then { allowFrom: $telegram_allow_from } else {} end),
-            discord: ({
-                enabled: $discord_enabled
-            } + if $discord_token != "" and $discord_token != "null" then { token: $discord_token } else {} end
-              + if ($discord_allow_from | length) > 0 then { allowFrom: $discord_allow_from } else {} end),
-            whatsapp: ({
-                enabled: $whatsapp_enabled,
-                bridgeUrl: "ws://127.0.0.1:3001"
-            } + if ($whatsapp_allow_from | length) > 0 then { allowFrom: $whatsapp_allow_from } else {} end)
-        },
-        gateway: {
-            host: "0.0.0.0",
-            port: 18790
-        }
-    }'
-)"
+GATEWAY_DEFAULTS='{"gateway":{"host":"0.0.0.0","port":18790}}'
 
 if [[ -f "${CONFIG_FILE}" ]]; then
-    # Merge: existing config as base, HA config overwrites
-    MERGED="$(jq -s '.[0] * .[1]' "${CONFIG_FILE}" <(echo "${HA_CONFIG}"))"
+    # Merge: user config takes precedence, gateway defaults fill in missing keys
+    MERGED="$(jq -s '.[0] * .[1]' <(echo "${GATEWAY_DEFAULTS}") "${CONFIG_FILE}")"
     echo "${MERGED}" > "${CONFIG_FILE}"
 else
-    echo "${HA_CONFIG}" > "${CONFIG_FILE}"
+    echo "${GATEWAY_DEFAULTS}" > "${CONFIG_FILE}"
 fi
 
 chmod 600 "${CONFIG_FILE}" || true
@@ -172,7 +100,7 @@ if [[ ! -f "${STATE_DIR}/workspace/AGENTS.md" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Start WhatsApp bridge (if enabled)
+# Start WhatsApp bridge (if enabled in config.json)
 # ---------------------------------------------------------------------------
 
 BRIDGE_PID=""
@@ -184,6 +112,8 @@ cleanup() {
     fi
 }
 trap cleanup EXIT INT TERM
+
+WHATSAPP_ENABLED="$(jq -r '.channels.whatsapp.enabled // false' "${CONFIG_FILE}" 2>/dev/null || echo 'false')"
 
 if [[ "${WHATSAPP_ENABLED}" == "true" ]]; then
     BRIDGE_DIR=""
@@ -232,15 +162,9 @@ fi
 
 echo "=========================================="
 echo "Nanobot Add-on"
-echo "Provider: ${PROVIDER}"
-if [[ -n "${MODEL}" && "${MODEL}" != "null" ]]; then
-    echo "Model: ${MODEL}"
-fi
-echo "Runtime mode: gateway"
 echo "State dir: ${STATE_DIR}"
-echo "Telegram: ${TELEGRAM_ENABLED}"
-echo "Discord: ${DISCORD_ENABLED}"
-echo "WhatsApp: ${WHATSAPP_ENABLED}"
+echo "Config: ${CONFIG_FILE}"
+echo "Runtime mode: gateway"
 echo "=========================================="
 
 # ---------------------------------------------------------------------------

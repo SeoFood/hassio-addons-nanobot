@@ -1,6 +1,6 @@
 ---
 name: Nanobot
-version: 0.1.4-1
+version: 0.1.4-2
 slug: nanobot
 description: Run Nanobot AI agent as a Home Assistant add-on
 url: https://github.com/SeoFood/hassio-addons-nanobot/tree/main/nanobot
@@ -15,30 +15,6 @@ ports:
 map:
   - share:rw
 options:
-  provider: openrouter
-  api_key: null
-  telegram_enabled: false
-  telegram_token: ""
-  telegram_allow_from: []
-  discord_enabled: false
-  discord_token: ""
-  discord_allow_from: []
-  whatsapp_enabled: false
-  whatsapp_allow_from: []
-  persistent_data_dir: ""
+  persistent_data_dir: nanobot
 schema:
-  provider: str
-  api_key: password
-  model: "str?"
-  telegram_enabled: bool
-  telegram_token: "password?"
-  telegram_allow_from:
-    - "str?"
-  discord_enabled: bool
-  discord_token: "password?"
-  discord_allow_from:
-    - "str?"
-  whatsapp_enabled: bool
-  whatsapp_allow_from:
-    - "str?"
   persistent_data_dir: str

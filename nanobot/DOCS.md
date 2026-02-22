@@ -4,112 +4,104 @@ Run the Nanobot AI agent as a Home Assistant add-on.
 
 ## Configuration
 
-### Required
+### Add-on UI
 
-- `provider` (required): LLM provider name (`openrouter`, `anthropic`, `openai`, `deepseek`, `groq`, `gemini`, ...)
-- `api_key` (required): API key for your provider
+The add-on has a single configuration option:
 
-### Optional
+- `persistent_data_dir`: Folder for all persistent add-on data (config, workspace, WhatsApp auth). Relative paths resolve under `/share`. Default: `nanobot` (i.e. `/share/nanobot`).
 
-- `model`: Explicit model override (e.g. `anthropic/claude-sonnet-4-20250514`). Leave empty to use the provider default.
-- `persistent_data_dir`: Folder for all persistent add-on data (config, workspace, WhatsApp auth). Relative paths resolve under `/share`.
+### config.json
 
-### Telegram
-
-- `telegram_enabled`: Enable Telegram channel
-- `telegram_token`: Bot token from @BotFather
-- `telegram_allow_from`: List of allowed Telegram user IDs or usernames
-
-### Discord
-
-- `discord_enabled`: Enable Discord channel
-- `discord_token`: Bot token from the Discord Developer Portal
-- `discord_allow_from`: List of allowed Discord user IDs
-
-### WhatsApp
-
-- `whatsapp_enabled`: Enable WhatsApp channel (uses built-in bridge)
-- `whatsapp_allow_from`: List of allowed phone numbers
-
-## Quick start
-
-1. Install the add-on.
-2. Set your provider and API key in the configuration tab:
-
-```yaml
-provider: openrouter
-api_key: "sk-or-v1-..."
-persistent_data_dir: nanobot
-```
-
-3. Start the add-on.
-4. Check the logs for the startup banner.
-
-## Telegram setup
-
-1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the token.
-2. Get your Telegram user ID (e.g. via [@userinfobot](https://t.me/userinfobot)).
-3. Configure:
-
-```yaml
-telegram_enabled: true
-telegram_token: "123456:ABC-DEF..."
-telegram_allow_from:
-  - "your_user_id"
-```
-
-4. Restart the add-on.
-
-## Discord setup
-
-1. Create a bot in the [Discord Developer Portal](https://discord.com/developers/applications).
-2. Enable the Message Content Intent.
-3. Copy the bot token and add the bot to your server.
-4. Configure:
-
-```yaml
-discord_enabled: true
-discord_token: "your-bot-token"
-discord_allow_from:
-  - "your_discord_user_id"
-```
-
-5. Restart the add-on.
-
-## WhatsApp setup
-
-1. Enable WhatsApp in the configuration:
-
-```yaml
-whatsapp_enabled: true
-whatsapp_allow_from:
-  - "+1234567890"
-```
-
-2. Start the add-on and check the logs for a QR code.
-3. Scan the QR code with WhatsApp on your phone.
-
-## Advanced configuration
-
-For additional channels (Feishu, DingTalk, Slack, QQ, Email, Mochat) and advanced tools (MCP servers, web search), edit the config file directly:
+All Nanobot settings (provider, API key, model, channels, tools, etc.) are configured directly in:
 
 ```
 /share/nanobot/.nanobot/config.json
 ```
 
-Keys you add manually are preserved across add-on restarts. Only keys managed by the add-on UI (provider, channels, gateway) are overwritten.
+On first start, a minimal config.json is created with gateway defaults. Edit this file to add your provider, API key, channels, and any other settings.
 
 For the full configuration schema, see the [Nanobot documentation](https://github.com/HKUDS/nanobot).
 
+## Quick start
+
+1. Install the add-on.
+2. Set `persistent_data_dir` (default `nanobot` is fine).
+3. Start the add-on.
+4. Edit `/share/nanobot/.nanobot/config.json` to add your provider and API key:
+
+```json
+{
+    "providers": {
+        "openrouter": {
+            "apiKey": "sk-or-v1-..."
+        }
+    },
+    "gateway": {
+        "host": "0.0.0.0",
+        "port": 18790
+    }
+}
+```
+
+5. Restart the add-on.
+
+## Channel setup
+
+All channels are configured in `config.json`. Examples:
+
+### Telegram
+
+```json
+{
+    "channels": {
+        "telegram": {
+            "enabled": true,
+            "token": "123456:ABC-DEF...",
+            "allowFrom": ["your_user_id"]
+        }
+    }
+}
+```
+
+### Discord
+
+```json
+{
+    "channels": {
+        "discord": {
+            "enabled": true,
+            "token": "your-bot-token",
+            "allowFrom": ["your_discord_user_id"]
+        }
+    }
+}
+```
+
+### WhatsApp
+
+```json
+{
+    "channels": {
+        "whatsapp": {
+            "enabled": true,
+            "bridgeUrl": "ws://127.0.0.1:3001",
+            "allowFrom": ["+1234567890"]
+        }
+    }
+}
+```
+
+The WhatsApp bridge is auto-started when `channels.whatsapp.enabled` is `true` in config.json. Check the logs for a QR code on first pairing.
+
 ## Notes
 
-- Default persistent data path is `/data/nanobot`.
-- If `persistent_data_dir` is set, data is stored there instead (e.g. `/share/nanobot`).
-- On first start with `persistent_data_dir`, existing data from `/data/nanobot` is auto-migrated when the target folder is empty.
+- Default persistent data path is `/share/nanobot` (when `persistent_data_dir: nanobot`).
+- On first start, `nanobot onboard` runs to create default config and workspace files.
 - The add-on runs Nanobot in gateway mode with an HTTP API on port 18790.
 - The gateway port can be exposed via the Network section in the add-on settings.
+- Gateway defaults (`host: 0.0.0.0`, `port: 18790`) are injected automatically so the container is always reachable.
 
 ## Security
 
-- Always set `allow_from` lists for your channels to restrict who can interact with the bot.
-- Avoid leaving `allow_from` empty in production - this allows anyone to use the bot.
+- Always set `allowFrom` lists for your channels to restrict who can interact with the bot.
+- Avoid leaving `allowFrom` empty in production - this allows anyone to use the bot.
