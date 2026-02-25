@@ -2,7 +2,7 @@ ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
 
 FROM ${BUILD_FROM}
 
-ARG NANOBOT_VERSION=0.1.4
+ARG NANOBOT_VERSION=0.1.4.post2
 
 # Install Python, Node.js 20, and system dependencies
 RUN apt-get update \
