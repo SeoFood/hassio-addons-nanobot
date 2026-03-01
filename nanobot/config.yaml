@@ -1,6 +1,6 @@
 ---
 name: Nanobot
-version: 0.1.4-2
+version: 0.1.4-3
 slug: nanobot
 description: Run Nanobot AI agent as a Home Assistant add-on
 url: https://github.com/SeoFood/hassio-addons-nanobot/tree/main/nanobot
