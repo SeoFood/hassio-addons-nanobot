@@ -4,7 +4,7 @@ FROM ${BUILD_FROM}
 
 ARG NANOBOT_VERSION=0.1.4
 
-# Install Python, Node.js 20, and system dependencies
+# Install Python, Node.js 20, GitHub CLI, and system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash \
@@ -21,8 +21,12 @@ RUN apt-get update \
         | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | dd of=/etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        > /etc/apt/sources.list.d/github-cli.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get install -y --no-install-recommends nodejs gh \
     && apt-get purge -y gnupg \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
