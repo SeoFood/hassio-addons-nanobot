@@ -56,8 +56,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # Remove PEP 668 marker so uv can install system-wide
 RUN rm -f /usr/lib/python3.*/EXTERNALLY-MANAGED
 
-# Install nanobot from PyPI
-RUN uv pip install --system "nanobot-ai==${NANOBOT_VERSION}"
+# Install nanobot and Playwright from PyPI
+RUN uv pip install --system "nanobot-ai==${NANOBOT_VERSION}" playwright \
+    && playwright install chromium
 
 # Build WhatsApp bridge
 RUN BRIDGE_DIR="$(python3 -c "import nanobot; import os; print(os.path.join(os.path.dirname(nanobot.__file__), '..', 'bridge'))")" \
