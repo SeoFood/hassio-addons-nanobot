@@ -5,6 +5,7 @@ FROM ${BUILD_FROM}
 ARG NANOBOT_VERSION=0.1.4
 
 # Install Python, Node.js 20, GitHub CLI, and system dependencies
+# Includes Chromium/Playwright libs for WhatsApp bridge
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash \
@@ -16,6 +17,23 @@ RUN apt-get update \
         python3 \
         python3-pip \
         python3-venv \
+        libasound2 \
+        libatk-bridge2.0-0 \
+        libatk1.0-0 \
+        libcairo2 \
+        libcups2 \
+        libdbus-1-3 \
+        libdrm2 \
+        libgbm1 \
+        libglib2.0-0 \
+        libnspr4 \
+        libnss3 \
+        libpango-1.0-0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxkbcommon0 \
+        libxrandr2 \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
         | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
